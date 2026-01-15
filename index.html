@@ -89,6 +89,21 @@
             font-size: 14px;
         }
 
+        .drop-zone {
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone:hover {
+            background: rgba(118, 150, 86, 0.1);
+            border-color: #658c47;
+        }
+
+        .drop-zone.dragover {
+            background: rgba(118, 150, 86, 0.2);
+            border-color: #658c47;
+            transform: scale(1.02);
+        }
+
         button {
             padding: 12px 14px;
             background: #769656;
@@ -374,11 +389,15 @@
         </header>
 
         <div class="upload-section">
-            <h3 style="margin-bottom: 15px;">Load PGN File</h3>
-            <div class="file-controls">
-                <input type="file" id="pgnFile" accept=".pgn">
-                <button onclick="app.loadPGN()">Load Puzzles</button>
+            <h3 style="margin-bottom: 12px;">📁 Load PGN File</h3>
+            <div id="dropZone" class="drop-zone" style="border: 2px dashed #769656; border-radius: 5px; padding: 15px; text-align: center; margin-bottom: 12px; cursor: pointer; transition: all 0.3s;">
+                <p style="margin: 0; font-size: 0.9em;">📲 Drag & drop PGN file here<br><span style="font-size: 0.85em; color: #b8b8b8;">or click to select</span></p>
+                <input type="file" id="pgnFile" accept=".pgn,.txt" style="display: none;">
             </div>
+            <div class="file-controls">
+                <button onclick="document.getElementById('pgnFile').click()" style="flex: 1;">📂 Select PGN File</button>
+            </div>
+            <div id="fileName" style="font-size: 0.85em; color: #b8b8b8; text-align: center; margin-top: 8px;"></div>
         </div>
 
         <div id="gameContainer" style="display: none;">
@@ -447,11 +466,11 @@
             currentUserMoveIndex: 0,
             selectedSquare: null,
 
-            loadPGN() {
+            loadPGN(file = null) {
                 const fileInput = document.getElementById('pgnFile');
-                const file = fileInput.files[0];
+                let pgnFile = file || fileInput.files[0];
                 
-                if (!file) {
+                if (!pgnFile) {
                     this.showMessage('Please select a PGN file', 'error');
                     return;
                 }
@@ -460,8 +479,13 @@
                 reader.onload = (e) => {
                     const pgnText = e.target.result;
                     this.parsePGN(pgnText);
+                    // Update display
+                    document.getElementById('fileName').textContent = `✓ Loaded: ${pgnFile.name}`;
                 };
-                reader.readAsText(file);
+                reader.onerror = () => {
+                    this.showMessage('Error reading file', 'error');
+                };
+                reader.readAsText(pgnFile);
             },
 
             parsePGN(pgnText) {
@@ -902,6 +926,72 @@
             console.log('App installed successfully');
             vibrate(200);
         });
+
+        // Drag and drop file handling
+        const dropZone = document.getElementById('dropZone');
+        const pgnFileInput = document.getElementById('pgnFile');
+
+        if (dropZone) {
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            // Highlight drop zone when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight(e) {
+                dropZone.classList.add('dragover');
+            }
+
+            function unhighlight(e) {
+                dropZone.classList.remove('dragover');
+            }
+
+            // Handle dropped files
+            dropZone.addEventListener('drop', handleDrop, false);
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+
+                if (files.length > 0) {
+                    const file = files[0];
+                    // Check if it's a PGN or text file
+                    if (file.name.endsWith('.pgn') || file.name.endsWith('.txt')) {
+                        pgnFileInput.files = files;
+                        app.loadPGN(file);
+                        vibrate(50);
+                    } else {
+                        app.showMessage('Please drop a PGN or TXT file', 'error');
+                    }
+                }
+            }
+
+            // Also allow clicking the drop zone to open file picker
+            dropZone.addEventListener('click', () => {
+                pgnFileInput.click();
+            });
+
+            // Update display when file is selected via input
+            pgnFileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    app.loadPGN();
+                }
+            });
+        }
     </script>
 </body>
 </html>
