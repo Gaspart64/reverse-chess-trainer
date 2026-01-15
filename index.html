@@ -625,7 +625,10 @@
                 for (let i = 0; i < puzzle.solution.length; i++) {
                     const tempGame = new Chess(puzzle.fen);
                     for (let j = 0; j < i; j++) {
-                        tempGame.move(puzzle.solution[j]);
+                        const moveResult = tempGame.move(puzzle.solution[j]);
+                        if (!moveResult) {
+                            console.error(`Failed to apply move: ${puzzle.solution[j]} at index ${j}`, tempGame.fen());
+                        }
                     }
                     if (tempGame.turn() === this.winningSide) {
                         this.userMoveIndices.push(i);
@@ -633,15 +636,23 @@
                 }
                 
                 const userMovesNeeded = this.currentLevel + 1;
-                const userMovesToSkip = userMovesNeeded;
-                const lastUserMoveIndexToSkip = this.userMoveIndices[this.userMoveIndices.length - userMovesToSkip];
+                const userMovesTotal = this.userMoveIndices.length;
+                const startMoveIndex = userMovesTotal - userMovesNeeded;
                 
-                for (let i = 0; i < lastUserMoveIndexToSkip; i++) {
-                    this.game.move(puzzle.solution[i]);
+                // Apply all moves up to the first move the user needs to make
+                for (let i = 0; i < puzzle.solution.length; i++) {
+                    if (this.userMoveIndices.includes(i) && i >= this.userMoveIndices[startMoveIndex]) {
+                        // Stop before this user move
+                        break;
+                    }
+                    const moveResult = this.game.move(puzzle.solution[i]);
+                    if (!moveResult) {
+                        console.error(`Failed to apply move: ${puzzle.solution[i]} at index ${i}`, this.game.fen());
+                    }
                 }
                 
                 this.userMovesInLevel = 0;
-                this.currentUserMoveIndex = this.userMoveIndices.length - userMovesNeeded;
+                this.currentUserMoveIndex = startMoveIndex;
                 this.selectedSquare = null;
                 
                 this.renderBoard();
