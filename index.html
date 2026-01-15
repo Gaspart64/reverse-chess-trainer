@@ -639,15 +639,14 @@
                 const userMovesTotal = this.userMoveIndices.length;
                 const startMoveIndex = userMovesTotal - userMovesNeeded;
                 
-                // Apply all moves up to the first move the user needs to make
-                for (let i = 0; i < puzzle.solution.length; i++) {
-                    if (this.userMoveIndices.includes(i) && i >= this.userMoveIndices[startMoveIndex]) {
-                        // Stop before this user move
-                        break;
-                    }
-                    const moveResult = this.game.move(puzzle.solution[i]);
-                    if (!moveResult) {
-                        console.error(`Failed to apply move: ${puzzle.solution[i]} at index ${i}`, this.game.fen());
+                // Apply all solution moves up to (but not including) the first user move in this level
+                const firstUserMoveInSolution = this.userMoveIndices[startMoveIndex];
+                if (firstUserMoveInSolution !== undefined) {
+                    for (let i = 0; i < firstUserMoveInSolution; i++) {
+                        const moveResult = this.game.move(puzzle.solution[i]);
+                        if (!moveResult) {
+                            console.error(`Failed to apply move: ${puzzle.solution[i]} at index ${i}`, this.game.fen());
+                        }
                     }
                 }
                 
