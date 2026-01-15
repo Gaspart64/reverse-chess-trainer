@@ -1,0 +1,177 @@
+# Reverse Chess Trainer PWA - Quick Reference
+
+## Files You Now Have
+
+1. **reverse_chess_trainer.html** (main app)
+   - Single self-contained file
+   - Service worker registration included
+   - PWA manifest link included
+   - Mobile-optimized UI
+
+2. **manifest.json** (PWA metadata)
+   - App icons and colors
+   - Installation settings
+   - Shortcuts and descriptions
+
+3. **sw.js** (service worker)
+   - Offline support
+   - Cache management
+   - Network fallback
+
+4. **Documentation**
+   - PWA_README.md - Full user guide
+   - PWA_CONVERSION_SUMMARY.md - Technical details
+   - DEPLOY.sh - Deployment steps
+
+## Quick Start Checklist
+
+### Test Locally
+- [ ] Open `reverse_chess_trainer.html` in Chrome/Firefox
+- [ ] Load a PGN file
+- [ ] Test puzzle solving
+- [ ] Check DevTools → Application → Service Workers (shows registered)
+
+### Prepare for Deployment
+- [ ] Verify all three files (HTML, manifest.json, sw.js) are in the same folder
+- [ ] Open manifest.json and verify path to `sw.js` is correct
+- [ ] Open reverse_chess_trainer.html and verify manifest path is correct
+
+### Deploy to GitHub Pages
+- [ ] Create GitHub repo: `your-username/chess-trainer`
+- [ ] Push all three files to `main` branch
+- [ ] Enable Pages in repository settings
+- [ ] Wait ~1 minute for deployment
+- [ ] Access: `https://your-username.github.io/chess-trainer/`
+
+### Install on Phone
+- [ ] **Android (Chrome)**: "Install app" button appears automatically
+- [ ] **iPhone (Safari)**: Share → "Add to Home Screen"
+- [ ] **iPad**: Same as iPhone
+- [ ] **Desktop**: Install icon in Chrome address bar
+
+## Key Features Added
+
+✅ Service Worker for offline play
+✅ Install button and prompts
+✅ Full-screen app mode
+✅ Vibration feedback on moves
+✅ Notch-aware safe area padding
+✅ Touch-optimized buttons (44x44px minimum)
+✅ Mobile-first responsive design
+✅ SVG icons for all resolutions
+✅ Dark theme optimized for mobile
+✅ No external dependencies (except chess.js CDN)
+
+## Testing on Mobile
+
+**Chrome Android:**
+1. Open URL in Chrome
+2. Wait 3-5 seconds
+3. "Install app" banner appears at bottom
+4. Tap to install
+5. App opens full-screen
+
+**Safari iOS:**
+1. Open URL in Safari
+2. Tap share button (bottom)
+3. Tap "Add to Home Screen"
+4. Name: Chess Trainer
+5. Add
+6. App appears on home screen
+
+**Offline Testing:**
+1. Load app and PGN file on WiFi
+2. Go to Settings → WiFi and disconnect
+3. Open app from home screen
+4. Should work completely offline
+
+## PGN Format Reminder
+
+Required fields:
+```
+[FEN "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1"]
+[Event "Optional Title"]
+
+1. e4 e5 2. Qh5 f6 3. Qxf7#
+```
+
+Without FEN or moves, the puzzle will be skipped.
+
+## Troubleshooting
+
+**"Install app" button doesn't show**
+- Ensure HTTPS (GitHub Pages provides this)
+- Check manifest.json is valid JSON
+- Hard refresh: Ctrl+Shift+R
+
+**Puzzles don't load**
+- Verify PGN has [FEN "..."] tags
+- Verify move notation is standard algebraic (e.g., "Nf3", "Qh5#")
+- Check no syntax errors in PGN
+
+**Service worker not working**
+- Check DevTools → Application → Service Workers
+- Look for errors in console
+- Try: DevTools → Application → Clear storage → Unregister + refresh
+
+**App won't install on phone**
+- Android: Use Chrome, not Firefox or Edge
+- iOS: Use Safari, not Chrome
+- Check that URL is HTTPS (not HTTP)
+
+## File Size Reference
+
+- reverse_chess_trainer.html: ~30KB (with embedded CSS)
+- manifest.json: ~2KB
+- sw.js: ~2KB
+- **Total: ~34KB** (before chess.js from CDN)
+
+Chess.js library: ~100KB (cached after first visit)
+
+## Customization Tips
+
+**Change Theme Color:**
+In reverse_chess_trainer.html, find:
+```html
+<meta name="theme-color" content="#769656">
+```
+Change `#769656` to your preferred color.
+
+**Change App Name:**
+In manifest.json, modify:
+```json
+"short_name": "Chess Trainer"
+```
+
+**Add Your Own Puzzles:**
+Create a PGN file and load it in the app. Multiple puzzles can be in one file.
+
+## GitHub Pages URL Structure
+
+If deploying to subdirectory (not main domain):
+
+**Your repo structure:**
+```
+your-username/chess-trainer/
+├── reverse_chess_trainer.html
+├── manifest.json
+└── sw.js
+```
+
+**Access at:**
+```
+https://your-username.github.io/chess-trainer/
+```
+
+All paths are relative, so the app should work automatically!
+
+## Support Resources
+
+- Chess.js docs: https://github.com/jhlywa/chess.js
+- PWA documentation: https://web.dev/progressive-web-apps/
+- GitHub Pages: https://docs.github.com/en/pages
+- MDN Web App Manifest: https://developer.mozilla.org/en-US/docs/Web/Manifest
+
+---
+
+**Ready to deploy?** Start with "Deploy to GitHub Pages" checklist above! 🚀

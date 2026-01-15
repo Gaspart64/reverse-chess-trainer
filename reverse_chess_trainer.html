@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Chess Trainer">
+    <meta name="theme-color" content="#769656">
+    <meta name="description" content="Master chess puzzles using reverse incremental learning - start with checkmate and work backwards">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23312e2b' width='192' height='192'/><circle cx='96' cy='96' r='60' fill='%23769656'/><text x='96' y='110' font-size='60' font-weight='bold' text-anchor='middle' fill='%23fff' font-family='Arial'>♔</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23312e2b' width='180' height='180'/><circle cx='90' cy='90' r='54' fill='%23769656'/><text x='90' y='105' font-size='54' font-weight='bold' text-anchor='middle' fill='%23fff' font-family='Arial'>♔</text></svg>">
+    <title>Reverse Incremental Chess Trainer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #312e2b;
+            color: #fff;
+            padding: 12px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            padding-left: max(12px, env(safe-area-inset-left));
+            padding-right: max(12px, env(safe-area-inset-right));
+            padding-top: max(12px, env(safe-area-inset-top));
+            overflow-x: hidden;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            font-size: 1.5em;
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            font-size: 0.85em;
+            color: #b8b8b8;
+            margin-bottom: 12px;
+        }
+
+        .upload-section {
+            background: #262421;
+            border: 1px solid #3d3935;
+            border-radius: 5px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .file-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        input[type="file"] {
+            flex: 1;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            color: #000;
+            min-width: 150px;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 12px 14px;
+            background: #769656;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            min-height: 44px;
+            min-width: 44px;
+            -webkit-appearance: none;
+            appearance: none;
+            touch-action: manipulation;
+        }
+
+        button:active:not(:disabled) {
+            background: #658c47;
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .game-container {
+            background: #262421;
+            border: 1px solid #3d3935;
+            border-radius: 5px;
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .puzzle-info {
+            text-align: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #1c1a17;
+            border-radius: 5px;
+        }
+
+        .puzzle-title {
+            font-size: 1.1em;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .level-info {
+            font-size: 0.85em;
+            color: #b8b8b8;
+            margin-bottom: 6px;
+        }
+
+        .reverse-explanation {
+            background: #2c5530;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 0.8em;
+            line-height: 1.3;
+        }
+
+        .chessboard {
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto 10px;
+            aspect-ratio: 1;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            border: 2px solid #3d3935;
+            flex-shrink: 0;
+        }
+
+        .square {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            user-select: none;
+            position: relative;
+            aspect-ratio: 1;
+        }
+
+        .square.light {
+            background: #f0d9b5;
+        }
+
+        .square.dark {
+            background: #b58863;
+        }
+
+        .square.selected {
+            box-shadow: inset 0 0 0 3px #769656;
+        }
+
+        .square.valid-move {
+            background-image: radial-gradient(circle, rgba(0,0,0,0.2) 25%, transparent 25%);
+        }
+
+        .square.valid-move.light {
+            background-color: #f0d9b5;
+        }
+
+        .square.valid-move.dark {
+            background-color: #b58863;
+        }
+
+        .piece-white {
+            color: #fff;
+            text-shadow: 
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 2px 3px rgba(0,0,0,0.5);
+        }
+
+        .piece-black {
+            color: #000;
+            text-shadow: 
+                -1px -1px 0 #fff,
+                1px -1px 0 #fff,
+                -1px 1px 0 #fff,
+                1px 1px 0 #fff,
+                0 2px 3px rgba(0,0,0,0.3);
+        }
+
+        .controls {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .progress-section {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .level-dots {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .level-dot {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #4a4744;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85em;
+            font-weight: bold;
+            border: 2px solid #3d3935;
+            flex-shrink: 0;
+        }
+
+        .level-dot.completed {
+            background: #769656;
+            border-color: #658c47;
+        }
+
+        .level-dot.current {
+            background: #b58863;
+            border-color: #a67c52;
+            transform: scale(1.15);
+        }
+
+        .message {
+            text-align: center;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .message.success {
+            background: #2c5530;
+            border: 1px solid #3d7a42;
+        }
+
+        .message.error {
+            background: #5c2b29;
+            border: 1px solid #7a3d3b;
+        }
+
+        .message.info {
+            background: #3d5a80;
+            border: 1px solid #5176a8;
+        }
+
+        .puzzle-list {
+            background: #1c1a17;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .puzzle-item {
+            background: #262421;
+            padding: 8px;
+            margin-bottom: 6px;
+            border-radius: 4px;
+            border: 2px solid transparent;
+        }
+
+        .puzzle-item:active {
+            background: #2f2d2a;
+            border-color: #769656;
+        }
+
+        .puzzle-item.active {
+            background: #3d3935;
+            border-color: #b58863;
+        }
+
+        .puzzle-item.completed {
+            background: #2c5530;
+            border-color: #3d7a42;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: #4a4744;
+            border-radius: 2px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #769656;
+            transition: width 0.3s;
+        }
+
+        .stats {
+            background: #1c1a17;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px;
+            margin-bottom: 4px;
+            background: #262421;
+            border-radius: 3px;
+        }
+
+        @media (max-width: 600px) {
+            .square {
+                font-size: 2em;
+            }
+            .chessboard {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Reverse Incremental Chess Trainer</h1>
+            <p class="subtitle">Master puzzles from the finish line backwards - start with checkmate, work to the opening!</p>
+            <button id="installBtn" style="display: none; margin-top: 10px;">📱 Install App</button>
+        </header>
+
+        <div class="upload-section">
+            <h3 style="margin-bottom: 15px;">Load PGN File</h3>
+            <div class="file-controls">
+                <input type="file" id="pgnFile" accept=".pgn">
+                <button onclick="app.loadPGN()">Load Puzzles</button>
+            </div>
+        </div>
+
+        <div id="gameContainer" style="display: none;">
+            <div class="puzzle-list" id="puzzleList"></div>
+
+            <div class="game-container">
+                <div class="puzzle-info">
+                    <div class="puzzle-title" id="puzzleTitle">-</div>
+                    <div class="reverse-explanation">
+                        🔄 Reverse Learning: Start with the final move, gradually work backwards to the opening
+                    </div>
+                    <div class="level-info" id="levelInfo">-</div>
+                    <div class="level-info" id="sideInfo">-</div>
+                </div>
+
+                <div class="chessboard" id="board"></div>
+
+                <div class="progress-section">
+                    <div class="level-dots" id="levelDots"></div>
+                </div>
+
+                <div class="controls">
+                    <button onclick="app.resetLevel()">Reset Level</button>
+                    <button onclick="app.showHint()">Hint</button>
+                    <button onclick="app.previousLevel()" id="prevBtn" disabled>← Previous Level</button>
+                    <button onclick="app.nextPuzzle()">Next Puzzle →</button>
+                </div>
+
+                <div id="messageArea"></div>
+            </div>
+
+            <div class="stats" id="stats"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script>
+        // Register Service Worker for PWA offline support
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => {
+                console.log('Service Worker registration failed:', err);
+            });
+        }
+
+        // Prevent zoom on double-tap
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        const PIECES = {
+            'p': '♟', 'n': '♞', 'b': '♝', 'r': '♜', 'q': '♛', 'k': '♚',
+            'P': '♙', 'N': '♘', 'B': '♗', 'R': '♖', 'Q': '♕', 'K': '♔'
+        };
+
+        const app = {
+            puzzles: [],
+            currentPuzzleIndex: 0,
+            currentLevel: 0,
+            game: null,
+            userProgress: {},
+            winningSide: null,
+            userMoveIndices: [],
+            userMovesInLevel: 0,
+            currentUserMoveIndex: 0,
+            selectedSquare: null,
+
+            loadPGN() {
+                const fileInput = document.getElementById('pgnFile');
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    this.showMessage('Please select a PGN file', 'error');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const pgnText = e.target.result;
+                    this.parsePGN(pgnText);
+                };
+                reader.readAsText(file);
+            },
+
+            parsePGN(pgnText) {
+                this.puzzles = [];
+                const games = pgnText.split(/\n\n(?=\[)/);
+                
+                games.forEach((gameText, index) => {
+                    if (!gameText.trim()) return;
+                    
+                    const fenMatch = gameText.match(/\[FEN "([^"]+)"\]/);
+                    const eventMatch = gameText.match(/\[Event "([^"]+)"\]/);
+                    const movesMatch = gameText.match(/\]\s*\n\s*([^\[]+)$/);
+                    
+                    if (fenMatch && movesMatch) {
+                        const fen = fenMatch[1];
+                        const movesText = movesMatch[1].trim();
+                        const solution = this.extractMoves(movesText);
+                        
+                        if (solution.length > 0) {
+                            this.puzzles.push({
+                                id: index,
+                                fen: fen,
+                                solution: solution,
+                                title: eventMatch ? eventMatch[1] : `Puzzle ${index + 1}`,
+                                completed: false
+                            });
+                        }
+                    }
+                });
+
+                if (this.puzzles.length === 0) {
+                    this.showMessage('No valid puzzles found in PGN file', 'error');
+                    return;
+                }
+
+                this.initializeProgress();
+                this.displayPuzzleList();
+                this.loadPuzzle(0);
+                document.getElementById('gameContainer').style.display = 'block';
+                this.showMessage(`Loaded ${this.puzzles.length} puzzle${this.puzzles.length !== 1 ? 's' : ''} successfully!`, 'success');
+            },
+
+            extractMoves(movesText) {
+                const moves = [];
+                const cleaned = movesText.replace(/\{[^}]*\}/g, '').replace(/\([^)]*\)/g, '');
+                const tokens = cleaned.split(/\s+/);
+                
+                for (let token of tokens) {
+                    token = token.replace(/^\d+\.+/, '').trim();
+                    if (token && !token.match(/^(1-0|0-1|1\/2-1\/2|\*|0-1-0)$/)) {
+                        moves.push(token);
+                    }
+                }
+                
+                return moves;
+            },
+
+            initializeProgress() {
+                this.userProgress = {};
+                this.puzzles.forEach(puzzle => {
+                    this.userProgress[puzzle.id] = {
+                        currentLevel: 0,
+                        completedLevels: [],
+                        completed: false
+                    };
+                });
+            },
+
+            displayPuzzleList() {
+                const listEl = document.getElementById('puzzleList');
+                listEl.innerHTML = '<h3 style="margin-bottom: 10px;">Puzzle Collection</h3>';
+                
+                this.puzzles.forEach((puzzle, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'puzzle-item';
+                    if (index === this.currentPuzzleIndex) div.classList.add('active');
+                    if (this.userProgress[puzzle.id].completed) div.classList.add('completed');
+                    
+                    const progress = this.userProgress[puzzle.id];
+                    const tempGame = new Chess(puzzle.fen);
+                    const winningSide = tempGame.turn();
+                    let userMoveCount = 0;
+                    for (let i = 0; i < puzzle.solution.length; i++) {
+                        if (tempGame.turn() === winningSide) userMoveCount++;
+                        tempGame.move(puzzle.solution[i]);
+                    }
+                    
+                    const totalLevels = userMoveCount;
+                    const completedLevels = progress.completedLevels.length;
+                    const percentage = (completedLevels / totalLevels) * 100;
+                    
+                    div.innerHTML = `
+                        <div><strong>${puzzle.title}</strong></div>
+                        <div style="font-size: 0.9em; color: #b8b8b8;">
+                            ${totalLevels} levels • ${completedLevels} completed
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${percentage}%"></div>
+                        </div>
+                    `;
+                    
+                    div.onclick = () => this.loadPuzzle(index);
+                    listEl.appendChild(div);
+                });
+                
+                this.updateStats();
+            },
+
+            updateStats() {
+                const totalPuzzles = this.puzzles.length;
+                const completedPuzzles = Object.values(this.userProgress).filter(p => p.completed).length;
+                
+                let totalLevels = 0;
+                this.puzzles.forEach(puzzle => {
+                    const tempGame = new Chess(puzzle.fen);
+                    const winningSide = tempGame.turn();
+                    for (let i = 0; i < puzzle.solution.length; i++) {
+                        if (tempGame.turn() === winningSide) totalLevels++;
+                        tempGame.move(puzzle.solution[i]);
+                    }
+                });
+                
+                const completedLevels = Object.values(this.userProgress).reduce((sum, p) => sum + p.completedLevels.length, 0);
+                
+                document.getElementById('stats').innerHTML = `
+                    <h3 style="margin-bottom: 10px;">Progress</h3>
+                    <div class="stat-row">
+                        <span>Puzzles Completed:</span>
+                        <span>${completedPuzzles} / ${totalPuzzles}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Total Levels Completed:</span>
+                        <span>${completedLevels} / ${totalLevels}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Overall Progress:</span>
+                        <span>${totalLevels > 0 ? Math.round((completedLevels/totalLevels)*100) : 0}%</span>
+                    </div>
+                `;
+            },
+
+            loadPuzzle(index) {
+                this.currentPuzzleIndex = index;
+                const puzzle = this.puzzles[index];
+                this.currentLevel = this.userProgress[puzzle.id].currentLevel;
+                
+                this.displayPuzzleList();
+                this.setupLevel();
+            },
+
+            setupLevel() {
+                const puzzle = this.puzzles[this.currentPuzzleIndex];
+                
+                this.game = new Chess(puzzle.fen);
+                this.winningSide = this.game.turn();
+                
+                this.userMoveIndices = [];
+                for (let i = 0; i < puzzle.solution.length; i++) {
+                    const tempGame = new Chess(puzzle.fen);
+                    for (let j = 0; j < i; j++) {
+                        tempGame.move(puzzle.solution[j]);
+                    }
+                    if (tempGame.turn() === this.winningSide) {
+                        this.userMoveIndices.push(i);
+                    }
+                }
+                
+                const userMovesNeeded = this.currentLevel + 1;
+                const userMovesToSkip = userMovesNeeded;
+                const lastUserMoveIndexToSkip = this.userMoveIndices[this.userMoveIndices.length - userMovesToSkip];
+                
+                for (let i = 0; i < lastUserMoveIndexToSkip; i++) {
+                    this.game.move(puzzle.solution[i]);
+                }
+                
+                this.userMovesInLevel = 0;
+                this.currentUserMoveIndex = this.userMoveIndices.length - userMovesNeeded;
+                this.selectedSquare = null;
+                
+                this.renderBoard();
+                this.updateUI();
+                this.clearMessage();
+            },
+
+            renderBoard() {
+                const boardEl = document.getElementById('board');
+                boardEl.innerHTML = '';
+                
+                const board = this.game.board();
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const square = document.createElement('div');
+                        square.className = 'square';
+                        square.className += (row + col) % 2 === 0 ? ' light' : ' dark';
+                        
+                        const file = String.fromCharCode(97 + col);
+                        const rank = 8 - row;
+                        const squareName = file + rank;
+                        square.dataset.square = squareName;
+                        
+                        const piece = board[row][col];
+                        if (piece) {
+                            const pieceChar = piece.color === 'w' ? piece.type.toUpperCase() : piece.type;
+                            const pieceSpan = document.createElement('span');
+                            pieceSpan.textContent = PIECES[pieceChar];
+                            pieceSpan.className = piece.color === 'w' ? 'piece-white' : 'piece-black';
+                            square.appendChild(pieceSpan);
+                        }
+                        
+                        if (this.selectedSquare === squareName) {
+                            square.classList.add('selected');
+                        }
+                        
+                        const validMoves = this.game.moves({ square: this.selectedSquare, verbose: true });
+                        if (validMoves.some(m => m.to === squareName)) {
+                            square.classList.add('valid-move');
+                        }
+                        
+                        square.onclick = () => this.onSquareClick(squareName);
+                        
+                        boardEl.appendChild(square);
+                    }
+                }
+            },
+
+            onSquareClick(square) {
+                if (this.game.game_over()) return;
+                
+                const turn = this.game.turn();
+                if (turn !== this.winningSide) return;
+                
+                const piece = this.game.get(square);
+                
+                // If clicking on own piece, select it (or deselect if clicking same piece)
+                if (piece && piece.color === turn) {
+                    if (this.selectedSquare === square) {
+                        // Deselect if clicking the same piece
+                        this.selectedSquare = null;
+                    } else {
+                        // Select the new piece
+                        this.selectedSquare = square;
+                    }
+                    this.renderBoard();
+                    return;
+                }
+                
+                // If clicking on empty square or opponent piece with a piece selected
+                if (this.selectedSquare) {
+                    const move = this.game.move({
+                        from: this.selectedSquare,
+                        to: square,
+                        promotion: 'q'
+                    });
+                    
+                    if (move) {
+                        this.checkMove(move);
+                        this.selectedSquare = null;
+                    } else {
+                        // Invalid move - keep selection or deselect if clicking empty square
+                        if (!piece) {
+                            this.selectedSquare = null;
+                        }
+                        this.renderBoard();
+                    }
+                }
+            },
+
+            checkMove(move) {
+                const puzzle = this.puzzles[this.currentPuzzleIndex];
+                const targetMoveAbsoluteIndex = this.userMoveIndices[this.currentUserMoveIndex];
+                const targetMove = puzzle.solution[targetMoveAbsoluteIndex];
+                
+                if (move.san === targetMove) {
+                    vibrate(50);
+                    this.userMovesInLevel++;
+                    this.currentUserMoveIndex++;
+                    
+                    const userMovesNeeded = this.currentLevel + 1;
+                    
+                    if (this.userMovesInLevel >= userMovesNeeded) {
+                        this.renderBoard();
+                        this.completeLevel();
+                    } else {
+                        setTimeout(() => {
+                            const nextUserMoveIndex = this.userMoveIndices[this.currentUserMoveIndex];
+                            let currentAbsoluteIndex = targetMoveAbsoluteIndex + 1;
+                            
+                            while (currentAbsoluteIndex < nextUserMoveIndex) {
+                                const opponentMove = puzzle.solution[currentAbsoluteIndex];
+                                this.game.move(opponentMove);
+                                currentAbsoluteIndex++;
+                            }
+                            
+                            this.renderBoard();
+                            this.showMessage('✓ Correct! Opponent responded', 'success');
+                        }, 400);
+                    }
+                } else {
+                    vibrate([100, 50, 100]);
+                    this.game.undo();
+                    this.renderBoard();
+                    this.showMessage(`✗ Incorrect! Expected ${targetMove}`, 'error');
+                }
+            },
+
+            completeLevel() {
+                const puzzle = this.puzzles[this.currentPuzzleIndex];
+                const progress = this.userProgress[puzzle.id];
+                
+                if (!progress.completedLevels.includes(this.currentLevel)) {
+                    progress.completedLevels.push(this.currentLevel);
+                }
+                
+                if (this.currentLevel === this.userMoveIndices.length - 1) {
+                    vibrate([100, 50, 100, 50, 200]);
+                    progress.completed = true;
+                    puzzle.completed = true;
+                    this.showMessage('🎉 Puzzle Complete! All levels mastered!', 'success');
+                    this.displayPuzzleList();
+                } else {
+                    vibrate([100, 50, 100]);
+                    this.currentLevel++;
+                    progress.currentLevel = this.currentLevel;
+                    this.showMessage(`✓ Level ${this.currentLevel} complete! Moving to level ${this.currentLevel + 1}...`, 'success');
+                    setTimeout(() => {
+                        this.setupLevel();
+                    }, 1500);
+                }
+                
+                this.displayPuzzleList();
+            },
+
+            updateUI() {
+                const puzzle = this.puzzles[this.currentPuzzleIndex];
+                const progress = this.userProgress[puzzle.id];
+                
+                const userMovesNeeded = this.currentLevel + 1;
+                const userMovesRemaining = userMovesNeeded - this.userMovesInLevel;
+                
+                document.getElementById('puzzleTitle').textContent = puzzle.title;
+                document.getElementById('levelInfo').textContent = 
+                    `Level ${this.currentLevel + 1} of ${this.userMoveIndices.length} • ${userMovesRemaining} move${userMovesRemaining !== 1 ? 's' : ''} remaining`;
+                
+                const winningSideText = this.winningSide === 'w' ? 'White' : 'Black';
+                document.getElementById('sideInfo').textContent = 
+                    `Playing as ${winningSideText} • ${this.game.turn() === 'w' ? 'White' : 'Black'} to move`;
+                
+                const dotsEl = document.getElementById('levelDots');
+                dotsEl.innerHTML = '';
+                
+                for (let i = 0; i < this.userMoveIndices.length; i++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'level-dot';
+                    dot.textContent = i + 1;
+                    
+                    if (progress.completedLevels.includes(i)) {
+                        dot.classList.add('completed');
+                    }
+                    if (i === this.currentLevel) {
+                        dot.classList.add('current');
+                    }
+                    
+                    dotsEl.appendChild(dot);
+                }
+                
+                document.getElementById('prevBtn').disabled = this.currentLevel === 0;
+            },
+
+            resetLevel() {
+                this.setupLevel();
+                this.showMessage('Level reset', 'info');
+            },
+
+            showHint() {
+                const puzzle = this.puzzles[this.currentPuzzleIndex];
+                const targetMoveAbsoluteIndex = this.userMoveIndices[this.currentUserMoveIndex];
+                const targetMove = puzzle.solution[targetMoveAbsoluteIndex];
+                
+                this.showMessage(`💡 Hint: ${targetMove}`, 'info');
+            },
+
+            previousLevel() {
+                if (this.currentLevel > 0) {
+                    this.currentLevel--;
+                    this.userProgress[this.puzzles[this.currentPuzzleIndex].id].currentLevel = this.currentLevel;
+                    this.setupLevel();
+                }
+            },
+
+            nextPuzzle() {
+                if (this.currentPuzzleIndex < this.puzzles.length - 1) {
+                    this.loadPuzzle(this.currentPuzzleIndex + 1);
+                } else {
+                    this.showMessage('You\'ve completed all puzzles!', 'info');
+                }
+            },
+
+            showMessage(text, type) {
+                const messageArea = document.getElementById('messageArea');
+                messageArea.innerHTML = `<div class="message ${type}">${text}</div>`;
+            },
+
+            clearMessage() {
+                document.getElementById('messageArea').innerHTML = '';
+            }
+        };
+
+        // Vibration feedback helper
+        function vibrate(pattern = 10) {
+            if ('vibrate' in navigator) {
+                navigator.vibrate(pattern);
+            }
+        }
+
+        // PWA Install prompt handler
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Show install button if space available
+            const installBtn = document.getElementById('installBtn');
+            if (installBtn) {
+                installBtn.style.display = 'block';
+                installBtn.addEventListener('click', async () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        console.log(`User response to install: ${outcome}`);
+                        deferredPrompt = null;
+                        installBtn.style.display = 'none';
+                    }
+                });
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            console.log('App installed successfully');
+            vibrate(200);
+        });
+    </script>
+</body>
+</html>

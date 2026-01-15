@@ -1,0 +1,49 @@
+{
+  "name": "Reverse Incremental Chess Trainer",
+  "short_name": "Chess Trainer",
+  "description": "Master chess puzzles using reverse incremental learning - start with checkmate and work backwards",
+  "start_url": "/reverse_chess_trainer.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#312e2b",
+  "theme_color": "#769656",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23312e2b' width='192' height='192'/><circle cx='96' cy='96' r='60' fill='%23769656'/><text x='96' y='110' font-size='60' font-weight='bold' text-anchor='middle' fill='%23fff' font-family='Arial'>♔</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%23312e2b' width='512' height='512'/><circle cx='256' cy='256' r='160' fill='%23769656'/><text x='256' y='290' font-size='160' font-weight='bold' text-anchor='middle' fill='%23fff' font-family='Arial'>♔</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "education"],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%23312e2b' width='540' height='720'/><text x='270' y='360' font-size='48' text-anchor='middle' fill='%23fff' font-family='Arial'>Chess Trainer</text></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Train Puzzles",
+      "short_name": "Train",
+      "description": "Start training chess puzzles",
+      "url": "/reverse_chess_trainer.html?mode=train",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%23769656' width='96' height='96'/><text x='48' y='60' font-size='40' text-anchor='middle' fill='%23fff' font-family='Arial'>♚</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}
