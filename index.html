@@ -478,14 +478,21 @@
 
             parsePGN(pgnText) {
                 this.puzzles = [];
-                const games = pgnText.split(/\n\n(?=\[)/);
+                
+                // Split by blank line followed by [ to isolate each game
+                const games = pgnText.split(/\n\n(?=\[Event)/);
+                
+                console.log(`Total game sections found: ${games.length}`);
                 
                 games.forEach((gameText, index) => {
                     if (!gameText.trim()) return;
                     
                     const fenMatch = gameText.match(/\[FEN "([^"]+)"\]/);
                     const eventMatch = gameText.match(/\[Event "([^"]+)"\]/);
-                    const movesMatch = gameText.match(/\]\s*\n\s*([^\[]+)$/);
+                    
+                    // Extract moves: look for the pattern after all tags, before any remaining tags
+                    // Matches text after ] and newlines, up to end or next [
+                    const movesMatch = gameText.match(/\]\s*\n\n([\s\S]+?)(?:\n\n\[|$)/);
                     
                     if (fenMatch && movesMatch) {
                         const fen = fenMatch[1];
@@ -497,7 +504,7 @@
                                 id: index,
                                 fen: fen,
                                 solution: solution,
-                                title: eventMatch ? eventMatch[1] : `Puzzle ${index + 1}`,
+                                title: eventMatch ? `${eventMatch[1]} #${index + 1}` : `Puzzle ${index + 1}`,
                                 completed: false
                             });
                         }
