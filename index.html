@@ -490,14 +490,21 @@
                     const fenMatch = gameText.match(/\[FEN "([^"]+)"\]/);
                     const eventMatch = gameText.match(/\[Event "([^"]+)"\]/);
                     
-                    // Extract moves: look for the pattern after all tags, before any remaining tags
-                    // Matches text after ] and newlines, up to end or next [
+                    // Extract moves: look for content after the last ] bracket
+                    // The pattern is: any character after ], optionally whitespace/newlines, then the moves
                     const movesMatch = gameText.match(/\]\s*\n\n([\s\S]+?)(?:\n\n\[|$)/);
+                    
+                    console.log(`Game ${index + 1}: FEN=${fenMatch ? 'yes' : 'no'}, moves=${movesMatch ? 'yes' : 'no'}`);
+                    if (movesMatch) {
+                        console.log(`  Moves text: "${movesMatch[1].substring(0, 50)}..."`);
+                    }
                     
                     if (fenMatch && movesMatch) {
                         const fen = fenMatch[1];
                         const movesText = movesMatch[1].trim();
                         const solution = this.extractMoves(movesText);
+                        
+                        console.log(`  Extracted moves: ${solution.join(', ')}`);
                         
                         if (solution.length > 0) {
                             this.puzzles.push({
@@ -510,6 +517,8 @@
                         }
                     }
                 });
+
+                console.log(`Successfully loaded ${this.puzzles.length} puzzles`);
 
                 if (this.puzzles.length === 0) {
                     this.showMessage('No valid puzzles found in PGN file', 'error');
