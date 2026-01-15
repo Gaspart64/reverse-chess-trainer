@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Chess Trainer">
     <meta name="theme-color" content="#769656">
@@ -479,46 +479,36 @@
             parsePGN(pgnText) {
                 this.puzzles = [];
                 
-                // Split by blank line followed by [ to isolate each game
-                const games = pgnText.split(/\n\n(?=\[Event)/);
+                // Split games: they're separated by blank lines and start with [
+                // Use a more reliable split pattern
+                const gamePattern = /\[Event.*?\n\n(.+?)(?=\n\n\[Event|\n*$)/gs;
+                let match;
+                let gameIndex = 0;
                 
-                console.log(`Total game sections found: ${games.length}`);
-                
-                games.forEach((gameText, index) => {
-                    if (!gameText.trim()) return;
+                while ((match = gamePattern.exec(pgnText)) !== null) {
+                    const fullGameText = match[0];
                     
-                    const fenMatch = gameText.match(/\[FEN "([^"]+)"\]/);
-                    const eventMatch = gameText.match(/\[Event "([^"]+)"\]/);
-                    
-                    // Extract moves: look for content after the last ] bracket
-                    // The pattern is: any character after ], optionally whitespace/newlines, then the moves
-                    const movesMatch = gameText.match(/\]\s*\n\n([\s\S]+?)(?:\n\n\[|$)/);
-                    
-                    console.log(`Game ${index + 1}: FEN=${fenMatch ? 'yes' : 'no'}, moves=${movesMatch ? 'yes' : 'no'}`);
-                    if (movesMatch) {
-                        console.log(`  Moves text: "${movesMatch[1].substring(0, 50)}..."`);
-                    }
+                    const fenMatch = fullGameText.match(/\[FEN "([^"]+)"\]/);
+                    const eventMatch = fullGameText.match(/\[Event "([^"]+)"\]/);
+                    const movesMatch = fullGameText.match(/\[PlyCount[^\]]*\]\s*\n\n([\s\S]+?)$/);
                     
                     if (fenMatch && movesMatch) {
                         const fen = fenMatch[1];
                         const movesText = movesMatch[1].trim();
                         const solution = this.extractMoves(movesText);
                         
-                        console.log(`  Extracted moves: ${solution.join(', ')}`);
-                        
                         if (solution.length > 0) {
                             this.puzzles.push({
-                                id: index,
+                                id: gameIndex,
                                 fen: fen,
                                 solution: solution,
-                                title: eventMatch ? `${eventMatch[1]} #${index + 1}` : `Puzzle ${index + 1}`,
+                                title: eventMatch ? `${eventMatch[1]} #${gameIndex + 1}` : `Puzzle ${gameIndex + 1}`,
                                 completed: false
                             });
+                            gameIndex++;
                         }
                     }
-                });
-
-                console.log(`Successfully loaded ${this.puzzles.length} puzzles`);
+                }
 
                 if (this.puzzles.length === 0) {
                     this.showMessage('No valid puzzles found in PGN file', 'error');
