@@ -523,6 +523,8 @@
                 for (let token of tokens) {
                     token = token.replace(/^\d+\.+/, '').trim();
                     if (token && !token.match(/^(1-0|0-1|1\/2-1\/2|\*|0-1-0)$/)) {
+                        // Remove check (+) and mate (#) symbols
+                        token = token.replace(/[\+#]$/, '');
                         moves.push(token);
                     }
                 }
