@@ -621,6 +621,10 @@
                 this.game = new Chess(puzzle.fen);
                 this.winningSide = this.game.turn();
                 
+                console.log(`Puzzle: ${puzzle.title}`);
+                console.log(`Initial FEN: ${puzzle.fen}`);
+                console.log(`Solution moves: ${puzzle.solution.join(', ')}`);
+                
                 this.userMoveIndices = [];
                 for (let i = 0; i < puzzle.solution.length; i++) {
                     const tempGame = new Chess(puzzle.fen);
@@ -635,24 +639,39 @@
                     }
                 }
                 
+                console.log(`Winning side: ${this.winningSide}`);
+                console.log(`User move indices: ${this.userMoveIndices.join(', ')}`);
+                
                 const userMovesNeeded = this.currentLevel + 1;
                 const userMovesTotal = this.userMoveIndices.length;
                 const startMoveIndex = userMovesTotal - userMovesNeeded;
                 
+                console.log(`Level ${this.currentLevel + 1}: User moves needed = ${userMovesNeeded}, Start index = ${startMoveIndex}`);
+                
                 // Apply all solution moves up to (but not including) the first user move in this level
                 const firstUserMoveInSolution = this.userMoveIndices[startMoveIndex];
+                console.log(`First user move in solution: ${firstUserMoveInSolution}`);
+                
                 if (firstUserMoveInSolution !== undefined) {
+                    console.log(`Applying setup moves 0 to ${firstUserMoveInSolution - 1}:`);
                     for (let i = 0; i < firstUserMoveInSolution; i++) {
+                        console.log(`  Applying move ${i}: ${puzzle.solution[i]}`);
                         const moveResult = this.game.move(puzzle.solution[i]);
-                        if (!moveResult) {
-                            console.error(`Failed to apply move: ${puzzle.solution[i]} at index ${i}`, this.game.fen());
+                        if (moveResult) {
+                            console.log(`    Success. FEN: ${this.game.fen()}`);
+                        } else {
+                            console.error(`    FAILED! Current FEN: ${this.game.fen()}`);
                         }
                     }
+                } else {
+                    console.log(`No setup moves needed (firstUserMoveInSolution is undefined)`);
                 }
                 
                 this.userMovesInLevel = 0;
                 this.currentUserMoveIndex = startMoveIndex;
                 this.selectedSquare = null;
+                
+                console.log(`Final board FEN: ${this.game.fen()}`);
                 
                 this.renderBoard();
                 this.updateUI();
