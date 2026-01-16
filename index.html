@@ -464,38 +464,57 @@
                 reader.readAsText(file);
             },
 
-            parsePGN(pgnText) {
-                this.puzzles = [];
-                const games = pgnText.split(/\n\n(?=\[)/);
-                
-                games.forEach((gameText, index) => {
-                    if (!gameText.trim()) return;
-                    
-                    const fenMatch = gameText.match(/\[FEN "([^"]+)"\]/);
-                    const eventMatch = gameText.match(/\[Event "([^"]+)"\]/);
-                    const movesMatch = gameText.match(/\]\s*\n\s*([^\[]+)$/);
-                    
-                    if (fenMatch && movesMatch) {
-                        const fen = fenMatch[1];
-                        const movesText = movesMatch[1].trim();
-                        const solution = this.extractMoves(movesText);
-                        
-                        if (solution.length > 0) {
-                            this.puzzles.push({
-                                id: index,
-                                fen: fen,
-                                solution: solution,
-                                title: eventMatch ? eventMatch[1] : `Puzzle ${index + 1}`,
-                                completed: false
-                            });
-                        }
-                    }
+           parsePGN(pgnText) {
+    this.puzzles = [];
+    
+    // Split by double newline followed by [
+    const games = pgnText.split(/\n\n+(?=\[)/);
+    
+    console.log(`Found ${games.length} potential games in PGN`);
+    
+    games.forEach((gameText, index) => {
+        if (!gameText.trim()) return;
+        
+        const fenMatch = gameText.match(/\[FEN "([^"]+)"\]/);
+        const eventMatch = gameText.match(/\[Event "([^"]+)"\]/);
+        
+        // Find moves - everything after the last ]
+        const lastBracket = gameText.lastIndexOf(']');
+        const movesText = gameText.substring(lastBracket + 1).trim();
+        
+        if (fenMatch && movesText) {
+            const fen = fenMatch[1];
+            const solution = this.extractMoves(movesText);
+            
+            console.log(`Puzzle ${index}: Found ${solution.length} moves`);
+            
+            if (solution.length > 0) {
+                this.puzzles.push({
+                    id: index,
+                    fen: fen,
+                    solution: solution,
+                    title: eventMatch ? eventMatch[1] : `Puzzle ${index + 1}`,
+                    completed: false
                 });
+            } else {
+                console.warn(`Puzzle ${index} skipped: no moves found`);
+            }
+        } else {
+            console.warn(`Puzzle ${index} skipped: missing FEN or moves`);
+        }
+    });
 
-                if (this.puzzles.length === 0) {
-                    this.showMessage('No valid puzzles found in PGN file', 'error');
-                    return;
-                }
+    if (this.puzzles.length === 0) {
+        this.showMessage('No valid puzzles found in PGN file. Check browser console for details.', 'error');
+        return;
+    }
+
+    this.initializeProgress();
+    this.displayPuzzleList();
+    this.loadPuzzle(0);
+    document.getElementById('gameContainer').style.display = 'block';
+    this.showMessage(`Loaded ${this.puzzles.length} puzzle${this.puzzles.length !== 1 ? 's' : ''} successfully!`, 'success');
+}
 
                 this.initializeProgress();
                 this.displayPuzzleList();
@@ -505,19 +524,28 @@
             },
 
             extractMoves(movesText) {
-                const moves = [];
-                const cleaned = movesText.replace(/\{[^}]*\}/g, '').replace(/\([^)]*\)/g, '');
-                const tokens = cleaned.split(/\s+/);
-                
-                for (let token of tokens) {
-                    token = token.replace(/^\d+\.+/, '').trim();
-                    if (token && !token.match(/^(1-0|0-1|1\/2-1\/2|\*|0-1-0)$/)) {
-                        moves.push(token);
-                    }
-                }
-                
-                return moves;
-            },
+    const moves = [];
+    // Remove comments, variations, and result markers
+    const cleaned = movesText
+        .replace(/\{[^}]*\}/g, '')  // Remove {comments}
+        .replace(/\([^)]*\)/g, '')  // Remove (variations)
+        .replace(/\*/g, '')         // Remove * result marker
+        .replace(/1-0|0-1|1\/2-1\/2/g, ''); // Remove other results
+    
+    const tokens = cleaned.split(/\s+/);
+    
+    for (let token of tokens) {
+        // Remove move numbers like "1.", "2.", etc.
+        token = token.replace(/^\d+\.+/, '').trim();
+        // Skip empty tokens
+        if (token && token.length > 0) {
+            moves.push(token);
+        }
+    }
+    
+    console.log('Extracted moves:', moves); // DEBUG - see what's being extracted
+    return moves;
+}
 
             initializeProgress() {
                 this.userProgress = {};
